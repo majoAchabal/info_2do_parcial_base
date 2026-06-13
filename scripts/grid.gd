@@ -79,6 +79,7 @@ var best_score = 0
 var is_game_finished = false
 var final_popup = null
 var shuffle_popup = null
+var audio_manager = null
 
 
 # Called when the node enters the scene tree for the first time.
@@ -91,6 +92,7 @@ func _ready():
 	var ui = get_parent().get_node("top_ui")
 	final_popup = get_parent().get_node_or_null("FinalPopup")
 	shuffle_popup = get_parent().get_node_or_null("ShufflingPopup")
+	audio_manager = get_parent().get_node_or_null("AudioManager")
 	
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
@@ -311,6 +313,9 @@ func destroy_matched():
 
 	move_checked = true
 	if was_matched:
+		play_sfx("match")
+		if pending_player_move:
+			play_sfx("swap")
 		if pending_player_move and level_data != null and level_data.limite_movimientos > 0:
 			moves_left -= 1
 			counter_changed.emit(moves_left)
@@ -318,6 +323,7 @@ func destroy_matched():
 		pending_player_move = false
 		collapse_timer.start()
 	else:
+		play_sfx("invalid")
 		pending_player_move = false
 		swap_back()
 
@@ -430,9 +436,11 @@ func game_over(gano: bool):
 	# entrada del jugador y ofrece reiniciar la partida. Emite game_finished(gano).
 	if gano:
 		print("VICTORIA")
+		play_sfx("win")
 		unlocked_level = min(current_level_index + 1, levels.size() -1)
 	else:
 		print("DERROTA")
+		play_sfx("lose")
 		
 	level_timer.stop()
 	save_progress()
@@ -515,6 +523,8 @@ func save_progress():
 # func rebarajar() -> void:
 
 func _on_reset_progress_button_pressed():
+	play_sfx("button")
+	await get_tree().create_timer(0.15).timeout
 	var config = ConfigFile.new()
 	config.set_value("progress", "unlocked_level", 0)
 	config.set_value("progress", "best_score", 0)
@@ -523,10 +533,14 @@ func _on_reset_progress_button_pressed():
 
 
 func retry_level():
+	play_sfx("button")
+	await get_tree().create_timer(0.15).timeout
 	get_tree().reload_current_scene()
 
 
 func go_to_next_level():
+	play_sfx("button")
+	await get_tree().create_timer(0.15).timeout
 	if has_next_level():
 		unlocked_level = max(unlocked_level, current_level_index + 1)
 		save_progress()
@@ -538,6 +552,8 @@ func has_next_level() -> bool:
 
 
 func close_game():
+	play_sfx("button")
+	await get_tree().create_timer(0.15).timeout
 	get_tree().quit()
 
 
@@ -549,6 +565,11 @@ func show_shuffle_popup():
 func hide_shuffle_popup():
 	if shuffle_popup != null:
 		shuffle_popup.visible = false
+
+
+func play_sfx(sound_name: String):
+	if audio_manager != null:
+		audio_manager.play_sfx(sound_name)
 	
 
 func get_final_message(gano: bool) -> String:

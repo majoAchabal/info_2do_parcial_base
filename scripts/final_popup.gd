@@ -26,6 +26,10 @@ const VICTORY_LEVEL_POSITION := Vector2(90, 296)
 const FAILED_LEVEL_POSITION := Vector2(90, 315)
 const VICTORY_MESSAGE_POSITION := Vector2(76, 340)
 const FAILED_MESSAGE_POSITION := Vector2(76, 356)
+const CLOSE_BUTTON_POSITION := Vector2(360, 0)
+const CLOSE_BUTTON_SIZE := Vector2(120, 130)
+
+var close_was_pressed = false
 
 
 func _ready() -> void:
@@ -38,6 +42,7 @@ func _ready() -> void:
 
 func show_popup(gano: bool, nivel: int, mensaje: String, has_next_level: bool = true) -> void:
 	root.visible = true
+	close_was_pressed = false
 	popup_texture.texture = VICTORY_TEXTURE if gano else FAILED_TEXTURE
 	level_label.text = "Level " + str(nivel)
 	message_label.text = mensaje
@@ -75,6 +80,16 @@ func show_stars(star_texture: Texture2D) -> void:
 	star_right.visible = true
 
 
+func _input(event) -> void:
+	if not root.visible:
+		return
+
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var close_rect = Rect2(popup_texture.global_position + CLOSE_BUTTON_POSITION, CLOSE_BUTTON_SIZE)
+		if close_rect.has_point(event.position):
+			_on_close_button_pressed()
+
+
 func _on_next_level_button_pressed() -> void:
 	next_level_pressed.emit()
 
@@ -88,4 +103,8 @@ func _on_popup_reset_progress_button_pressed() -> void:
 
 
 func _on_close_button_pressed() -> void:
+	if close_was_pressed:
+		return
+
+	close_was_pressed = true
 	close_pressed.emit()
