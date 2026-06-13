@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cruh8bbcfvyvr"]
+[gd_scene load_steps=10 format=3 uid="uid://cruh8bbcfvyvr"]
 
 [ext_resource type="Texture2D" uid="uid://brp4euwugc18f" path="res://assets/background.png" id="1_blg2x"]
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" uid="uid://do6utrf2d383q" path="res://levels/level_1.tres" id="6_0tnpc"]
 [ext_resource type="Resource" uid="uid://w7baeiaaggmn" path="res://levels/level_2.tres" id="7_vtaks"]
 [ext_resource type="Resource" uid="uid://daynvcp2g3ecx" path="res://levels/level_3.tres" id="8_kvpfn"]
+[ext_resource type="Texture2D" path="res://assets/buttons/reset_progress.png" id="9_reset_progress"]
 
 [node name="Game" type="Node2D" unique_id=495977709]
 
@@ -23,6 +24,15 @@ offset_top = 928.0
 offset_right = 576.0
 offset_bottom = 1020.0
 texture = ExtResource("3_jy0d4")
+
+[node name="reset_progress_button" type="TextureButton" parent="." unique_id=2055056134]
+offset_left = 398.0
+offset_top = 134.0
+offset_right = 560.0
+offset_bottom = 186.0
+texture_normal = ExtResource("9_reset_progress")
+ignore_texture_size = true
+stretch_mode = 5
 
 [node name="grid" type="Node2D" parent="." unique_id=1598787432]
 script = ExtResource("4_4jr62")
@@ -49,3 +59,4 @@ one_shot = true
 [connection signal="timeout" from="grid/destroy_timer" to="grid" method="_on_destroy_timer_timeout"]
 [connection signal="timeout" from="grid/collapse_timer" to="grid" method="_on_collapse_timer_timeout"]
 [connection signal="timeout" from="grid/refill_timer" to="grid" method="_on_refill_timer_timeout"]
+[connection signal="pressed" from="reset_progress_button" to="grid" method="_on_reset_progress_button_pressed"]

@@ -52,6 +52,7 @@ var is_controlling = false
 #   signal game_finished(gano: bool)
 signal score_changed(nuevo_puntaje: int)
 signal counter_changed(restantes: int)
+signal level_changed(nivel: int)
 signal game_finished(gano: bool)
 
 var current_score = 0
@@ -87,6 +88,7 @@ func _ready():
 	
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
+	level_changed.connect(ui.update_level)
 	
 	load_progress()
 	
@@ -101,6 +103,7 @@ func _ready():
 	
 	score_changed.emit(current_score)
 	counter_changed.emit(get_counter_value())
+	level_changed.emit(current_level_index + 1)
 
 func make_2d_array():
 	var array = []
@@ -489,6 +492,14 @@ func save_progress():
 # TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
 # func hay_jugadas_validas() -> bool:
 # func rebarajar() -> void:
+
+func _on_reset_progress_button_pressed():
+	var config = ConfigFile.new()
+	config.set_value("progress", "unlocked_level", 0)
+	config.set_value("progress", "best_score", 0)
+	config.save(SAVE_PATH)
+	get_tree().reload_current_scene()
+	
 
 func hay_match_after_swap(col: int, row: int, dir: Vector2) -> bool:
 	var other_col = col + int(dir.x)
