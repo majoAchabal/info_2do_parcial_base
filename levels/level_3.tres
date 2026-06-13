@@ -6,8 +6,8 @@
 script = ExtResource("1_3et5p")
 nombre = "Nivel 3"
 objetivo_tipo = 2
-limite_movimientos = 1000000
-objetivo_pink = 1000000000
+limite_movimientos = 20
+objetivo_pink = 15
 objetivo_yellow = 10
 objetivo_blue = 5
 metadata/_custom_type_script = "uid://blhm7y1ddy3c6"
