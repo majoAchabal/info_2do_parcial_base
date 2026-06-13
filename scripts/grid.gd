@@ -42,6 +42,7 @@ var is_controlling = false
 @onready var destroy_timer: Timer = $destroy_timer
 @onready var collapse_timer: Timer = $collapse_timer
 @onready var refill_timer: Timer = $refill_timer
+@onready var hint_timer: Timer = $hint_timer
 @onready  var level_timer: Timer  = Timer.new()
 
 # === PUNTAJE (B1) y CONTADOR (B2) ===
@@ -83,6 +84,14 @@ var final_popup = null
 var shuffle_popup = null
 var audio_manager = null
 var collect_goal_ui = null
+var hint_pieces = []
+var hint_original_scales = []
+var hint_original_modulates = []
+var hint_original_z_indexes = []
+var hint_original_sprite_scales = []
+var hint_original_sprite_positions = []
+var hint_tween = null
+var hint_animation_time = 0.0
 
 
 # Called when the node enters the scene tree for the first time.
@@ -110,6 +119,7 @@ func _ready():
 	if collect_goal_ui != null:
 		collect_goals_changed.connect(collect_goal_ui.setup_goals)
 		collect_progress_changed.connect(collect_goal_ui.update_progress)
+	hint_timer.timeout.connect(show_hint)
 	
 	load_progress()
 	
@@ -125,6 +135,7 @@ func _ready():
 	score_changed.emit(current_score)
 	counter_changed.emit(get_counter_value())
 	level_changed.emit(current_level_index + 1)
+	start_hint_timer()
 
 func make_2d_array():
 	var array = []
@@ -183,6 +194,7 @@ func touch_input():
 	var mouse_pos = get_global_mouse_position()
 	var grid_pos = pixel_to_grid(mouse_pos.x, mouse_pos.y)
 	if Input.is_action_just_pressed("ui_touch") and in_grid(grid_pos.x, grid_pos.y):
+		reset_hint_timer()
 		first_touch = grid_pos
 		is_controlling = true
 		
@@ -197,6 +209,8 @@ func swap_pieces(column, row, direction: Vector2, consume_move:=true):
 	var other_piece = all_pieces[column + direction.x][row + direction.y]
 	if first_piece == null or other_piece == null:
 		return
+	if consume_move:
+		stop_hint_timer()
 	# swap
 	state = WAIT
 	store_info(first_piece, other_piece, Vector2(column, row), direction)
@@ -230,6 +244,7 @@ func swap_back():
 		swap_pieces(last_place.x, last_place.y, last_direction, false)
 	state = MOVE
 	move_checked = false
+	start_hint_timer()
 
 func touch_difference(grid_1, grid_2):
 	var difference = grid_2 - grid_1
@@ -249,10 +264,13 @@ func _process(delta):
 	if Input.is_action_just_pressed("ui_accept"):
 		show_hint()
 	
+	update_hint_animation(delta)
+	
 	if state == MOVE and not is_game_finished:
 		touch_input()
 
 func find_matches():
+	stop_hint_timer()
 	# TODO (PARCIAL · M3): aquí es donde se decide qué piezas forman cada combinación.
 	# Para crear piezas especiales necesitas conocer el LARGO de cada línea: una de 4
 	# genera una pieza de línea (fila/columna) y una de 5 una bomba de color. El chequeo
@@ -707,11 +725,13 @@ func check_after_refill():
 	
 	
 	if not has_valid_moves():
+		stop_hint_timer()
 		show_shuffle_popup()
 		await shuffle_board()
 		hide_shuffle_popup()
 	state = MOVE
 	move_checked = false
+	start_hint_timer()
 
 func _on_destroy_timer_timeout():
 	destroy_matched()
@@ -725,6 +745,8 @@ func _on_refill_timer_timeout():
 func game_over(gano: bool):
 	if is_game_finished:
 		return
+	clear_hint()
+	hint_timer.stop()
 	is_game_finished = true
 	state = WAIT
 	# TODO (PARCIAL · B3): muestra la pantalla final (victoria o derrota), detén la
@@ -972,17 +994,99 @@ func has_valid_moves() -> bool:
 	
 
 func show_hint():
+	if state != MOVE or is_game_finished:
+		return
+
+	clear_hint()
+	var hint_move = find_hint_move()
+	if hint_move.is_empty():
+		print("No hay pista disponible.")
+		return
+
+	var first_position = hint_move[0]
+	var second_position = hint_move[1]
+	var first_piece = all_pieces[first_position.x][first_position.y]
+	var second_piece = all_pieces[second_position.x][second_position.y]
+
+	if first_piece == null or second_piece == null:
+		return
+
+	hint_pieces = [first_piece, second_piece]
+	hint_original_scales = [first_piece.scale, second_piece.scale]
+	hint_original_modulates = [first_piece.get_node("Sprite2D").modulate, second_piece.get_node("Sprite2D").modulate]
+	hint_original_z_indexes = [first_piece.z_index, second_piece.z_index]
+	hint_original_sprite_scales = [first_piece.get_node("Sprite2D").scale, second_piece.get_node("Sprite2D").scale]
+	hint_original_sprite_positions = [first_piece.get_node("Sprite2D").position, second_piece.get_node("Sprite2D").position]
+
+	for piece in hint_pieces:
+		piece.z_index = 20
+		piece.get_node("Sprite2D").modulate = Color(1.8, 1.8, 1.0, 1)
+
+	hint_animation_time = 0.0
+
+
+func find_hint_move() -> Array:
 	for i in width:
 		for j in height:
 			if hay_match_after_swap(i, j, Vector2(1, 0)):
-				print("PISTA: mueve la pieza en columna ", i, ", fila ", j, " hacia la derecha.")
-				return
+				return [Vector2i(i, j), Vector2i(i + 1, j)]
 
 			if hay_match_after_swap(i, j, Vector2(0, 1)):
-				print("PISTA: mueve la pieza en columna ", i, ", fila ", j, " hacia arriba.")
-				return
+				return [Vector2i(i, j), Vector2i(i, j + 1)]
 
-	print("No hay pista disponible.")
+	return []
+
+
+func start_hint_timer():
+	if state == MOVE and not is_game_finished:
+		hint_timer.start()
+
+
+func stop_hint_timer():
+	clear_hint()
+	hint_timer.stop()
+
+
+func reset_hint_timer():
+	clear_hint()
+	hint_timer.stop()
+	start_hint_timer()
+
+
+func clear_hint():
+	if hint_tween != null:
+		hint_tween.kill()
+		hint_tween = null
+
+	for i in hint_pieces.size():
+		if is_instance_valid(hint_pieces[i]):
+			hint_pieces[i].scale = hint_original_scales[i]
+			hint_pieces[i].z_index = hint_original_z_indexes[i]
+			hint_pieces[i].get_node("Sprite2D").modulate = hint_original_modulates[i]
+			hint_pieces[i].get_node("Sprite2D").scale = hint_original_sprite_scales[i]
+			hint_pieces[i].get_node("Sprite2D").position = hint_original_sprite_positions[i]
+
+	hint_pieces = []
+	hint_original_scales = []
+	hint_original_modulates = []
+	hint_original_z_indexes = []
+	hint_original_sprite_scales = []
+	hint_original_sprite_positions = []
+	hint_animation_time = 0.0
+
+
+func update_hint_animation(delta):
+	if hint_pieces.is_empty():
+		return
+
+	hint_animation_time += delta
+	var pulse = (sin(hint_animation_time * 8.0) + 1.0) / 2.0
+
+	for i in hint_pieces.size():
+		if is_instance_valid(hint_pieces[i]):
+			var sprite = hint_pieces[i].get_node("Sprite2D")
+			sprite.scale = hint_original_sprite_scales[i] * (1.0 + 0.25 * pulse)
+			sprite.position = hint_original_sprite_positions[i] + Vector2(0, -8.0 * pulse)
 
 
 func shuffle_board():

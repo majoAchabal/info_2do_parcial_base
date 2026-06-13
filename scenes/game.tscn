@@ -158,6 +158,10 @@ one_shot = true
 wait_time = 0.5
 one_shot = true
 
+[node name="hint_timer" type="Timer" parent="grid"]
+wait_time = 10.0
+one_shot = true
+
 [node name="AudioManager" type="Node" parent="."]
 script = ExtResource("18_audio_manager")
 
