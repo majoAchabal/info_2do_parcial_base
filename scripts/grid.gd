@@ -343,6 +343,9 @@ func activate_swapped_specials(column, row, direction: Vector2) -> bool:
 	var first_piece = all_pieces[first_piece_position.x][first_piece_position.y]
 	var other_piece = all_pieces[other_piece_position.x][other_piece_position.y]
 
+	if activate_special_combo(first_piece, first_piece_position, other_piece, other_piece_position):
+		return true
+
 	if activate_rainbow(first_piece, first_piece_position.x, first_piece_position.y, other_piece):
 		return true
 	if activate_rainbow(other_piece, other_piece_position.x, other_piece_position.y, first_piece):
@@ -354,6 +357,95 @@ func activate_swapped_specials(column, row, direction: Vector2) -> bool:
 		activated = true
 
 	return activated
+
+
+func activate_special_combo(first_piece, first_position: Vector2i, other_piece, other_position: Vector2i) -> bool:
+	if not is_special_piece(first_piece) or not is_special_piece(other_piece):
+		return false
+
+	first_piece.matched = true
+	first_piece.dim()
+	other_piece.matched = true
+	other_piece.dim()
+
+	var first_type = first_piece.special_type
+	var other_type = other_piece.special_type
+	var combo_position = first_position
+	var row_position = get_combo_position_for_type(first_type, first_position, other_type, other_position, "row")
+	var column_position = get_combo_position_for_type(first_type, first_position, other_type, other_position, "column")
+	var adjacent_position = get_combo_position_for_type(first_type, first_position, other_type, other_position, "adjacent")
+
+	if first_type == "rainbow" and other_type == "rainbow":
+		mark_all_pieces()
+	elif first_type == "rainbow":
+		activate_rainbow_combo(other_piece, other_position)
+	elif other_type == "rainbow":
+		activate_rainbow_combo(first_piece, first_position)
+	elif is_row_column_combo(first_type, other_type):
+		mark_row(row_position.y)
+		mark_column(column_position.x)
+	elif first_type == "row" and other_type == "row":
+		mark_row(first_position.y)
+		mark_row(other_position.y)
+	elif first_type == "column" and other_type == "column":
+		mark_column(first_position.x)
+		mark_column(other_position.x)
+	elif has_combo_types(first_type, other_type, "row", "adjacent"):
+		mark_row(row_position.y)
+		mark_square(adjacent_position.x, adjacent_position.y, 1)
+	elif has_combo_types(first_type, other_type, "column", "adjacent"):
+		mark_column(column_position.x)
+		mark_square(adjacent_position.x, adjacent_position.y, 1)
+	elif first_type == "adjacent" and other_type == "adjacent":
+		mark_square(combo_position.x, combo_position.y, 2)
+	else:
+		# TODO (PARCIAL · M3): mejorar combos nuevos si se agregan más tipos especiales.
+		activate_special(first_piece, first_position.x, first_position.y)
+		activate_special(other_piece, other_position.x, other_position.y)
+
+	return true
+
+
+func get_combo_position_for_type(first_type: String, first_position: Vector2i, other_type: String, other_position: Vector2i, needed_type: String) -> Vector2i:
+	if first_type == needed_type:
+		return first_position
+	if other_type == needed_type:
+		return other_position
+
+	return first_position
+
+
+func is_special_piece(piece) -> bool:
+	return piece != null and piece.special_type != ""
+
+
+func is_row_column_combo(first_type: String, other_type: String) -> bool:
+	return has_combo_types(first_type, other_type, "row", "column")
+
+
+func has_combo_types(first_type: String, other_type: String, needed_a: String, needed_b: String) -> bool:
+	return (
+		(first_type == needed_a and other_type == needed_b)
+		or (first_type == needed_b and other_type == needed_a)
+	)
+
+
+func activate_rainbow_combo(other_piece, other_position: Vector2i):
+	if other_piece == null or other_piece.color == "":
+		mark_all_pieces()
+		return
+
+	if other_piece.special_type == "row":
+		mark_color(other_piece.color)
+		mark_row(other_position.y)
+	elif other_piece.special_type == "column":
+		mark_color(other_piece.color)
+		mark_column(other_position.x)
+	elif other_piece.special_type == "adjacent":
+		mark_color(other_piece.color)
+		mark_square(other_position.x, other_position.y, 1)
+	else:
+		mark_color(other_piece.color)
 
 
 func activate_rainbow(rainbow_piece, rainbow_column, rainbow_row, target_piece) -> bool:
@@ -404,8 +496,12 @@ func mark_column(column):
 
 
 func mark_adjacent(column, row):
-	for i in range(column - 1, column + 2):
-		for j in range(row - 1, row + 2):
+	mark_square(column, row, 1)
+
+
+func mark_square(column, row, radius):
+	for i in range(column - radius, column + radius + 1):
+		for j in range(row - radius, row + radius + 1):
 			if in_grid(i, j) and all_pieces[i][j] != null:
 				all_pieces[i][j].matched = true
 				all_pieces[i][j].dim()
@@ -415,6 +511,14 @@ func mark_color(color_name):
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] != null and all_pieces[i][j].color == color_name:
+				all_pieces[i][j].matched = true
+				all_pieces[i][j].dim()
+
+
+func mark_all_pieces():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null:
 				all_pieces[i][j].matched = true
 				all_pieces[i][j].dim()
 
