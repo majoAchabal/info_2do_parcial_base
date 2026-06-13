@@ -48,8 +48,13 @@ var is_controlling = false
 #   signal score_changed(nuevo_puntaje: int)
 #   signal counter_changed(restantes: int)        # movimientos o segundos, tú decides
 #   signal game_finished(gano: bool)
-# TODO (PARCIAL · B1/B2): declara aquí el puntaje y el contador (y sus señales, si las usas).
+signal score_changed(nuevo_puntaje: int)
+signal counter_changed(restantes: int)
+signal game_finished(gano: bool)
 
+var current_score = 0
+var moves_left = 20
+var target_score = 10000
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -57,6 +62,14 @@ func _ready():
 	randomize()
 	all_pieces = make_2d_array()
 	spawn_pieces()
+	
+	var ui = get_parent().get_node("top_ui")
+	
+	score_changed.connect(ui.update_score)
+	counter_changed.connect(ui.update_counter)
+	
+	score_changed.emit(current_score)
+	counter_changed.emit(moves_left)
 
 func make_2d_array():
 	var array = []
@@ -142,6 +155,8 @@ func swap_pieces(column, row, direction: Vector2):
 	# actívala aquí (su efecto reemplaza a la búsqueda normal de combinaciones).
 	# TODO (PARCIAL · B2): un intercambio válido consume una jugada. Decide dónde
 	# descontar el contador: aquí, o en destroy_matched() solo si hubo combinación.
+	moves_left -= 1
+	counter_changed.emit(moves_left)
 	if not move_checked:
 		find_matches()
 
@@ -224,6 +239,8 @@ func destroy_matched():
 				was_matched = true
 				# TODO (PARCIAL · B1): suma puntaje por cada pieza destruida (o por
 				# combinación) y emite score_changed para actualizar el HUD.
+				current_score += 100
+				score_changed.emit(current_score)
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 
@@ -275,13 +292,21 @@ func check_after_refill():
 		for j in height:
 			if all_pieces[i][j] != null and match_at(i, j, all_pieces[i][j].color):
 				find_matches()
-				destroy_timer.start()
+				#destroy_timer.start()
 				return
 	# El tablero quedó estable: no hay más combinaciones en cascada.
 	# TODO (PARCIAL · M1): verifica si se cumplió o falló el objetivo del nivel
 	# (puntaje meta, piezas recolectadas, etc.) y dispara victoria o derrota.
 	# TODO (PARCIAL · M2): comprueba si todavía existe alguna jugada válida; si no,
 	# rebaraja el tablero hasta que haya al menos una.
+	if current_score >= target_score:
+		game_over(true)
+		return
+	
+	if moves_left <= 0:
+		game_over(false)
+		return 
+	
 	state = MOVE
 	move_checked = false
 
@@ -294,10 +319,17 @@ func _on_collapse_timer_timeout():
 func _on_refill_timer_timeout():
 	refill_columns()
 	
-func game_over():
+func game_over(gano: bool):
 	state = WAIT
 	# TODO (PARCIAL · B3): muestra la pantalla final (victoria o derrota), detén la
 	# entrada del jugador y ofrece reiniciar la partida. Emite game_finished(gano).
+	if gano:
+		print("VICTORIA")
+	else:
+		print("DERROTA")
+	
+	await  get_tree().create_timer(2.0).timeout
+	get_tree().reload_current_scene()
 	# TODO (PARCIAL · M4): guarda el progreso (nivel alcanzado) y el mejor puntaje
 	# en disco (user://) para conservarlos entre sesiones.
 

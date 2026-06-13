@@ -1,3 +1,7 @@
+### Integrantes
+1. María José Achabal - 77839
+2. Isabel Rios - 77682
+
 # Segundo Parcial — Match-3 (Infografía, I/2026)
 
 Proyecto base para el segundo parcial. Recibes un juego **Match-3** funcional pero

@@ -13,10 +13,8 @@ var current_count = 0
 
 func update_score(nuevo_puntaje: int) -> void:
 	current_score = nuevo_puntaje
-	# TODO (PARCIAL · B1): refleja current_score en score_label.text con el formato que prefieras.
-	pass
+	score_label.text = str(current_score)
 
 func update_counter(restantes: int) -> void:
 	current_count = restantes
-	# TODO (PARCIAL · B2): refleja current_count en counter_label.text.
-	pass
+	counter_label.text = str(current_count)
