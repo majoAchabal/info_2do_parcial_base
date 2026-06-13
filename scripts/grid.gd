@@ -54,7 +54,7 @@ signal score_changed(nuevo_puntaje: int)
 signal counter_changed(restantes: int)
 signal level_changed(nivel: int)
 signal game_finished(gano: bool)
-signal final_popup_requested(gano: bool, nivel: int, mensaje: String)
+signal final_popup_requested(gano: bool, nivel: int, mensaje: String, has_next_level: bool)
 
 var current_score = 0
 var moves_left = 20
@@ -78,6 +78,7 @@ var unlocked_level = 0
 var best_score = 0
 var is_game_finished = false
 var final_popup = null
+var shuffle_popup = null
 
 
 # Called when the node enters the scene tree for the first time.
@@ -89,12 +90,17 @@ func _ready():
 	
 	var ui = get_parent().get_node("top_ui")
 	final_popup = get_parent().get_node_or_null("FinalPopup")
+	shuffle_popup = get_parent().get_node_or_null("ShufflingPopup")
 	
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
 	level_changed.connect(ui.update_level)
 	if final_popup != null:
 		final_popup_requested.connect(final_popup.show_popup)
+		final_popup.retry_pressed.connect(retry_level)
+		final_popup.next_level_pressed.connect(go_to_next_level)
+		final_popup.reset_progress_pressed.connect(_on_reset_progress_button_pressed)
+		final_popup.close_pressed.connect(close_game)
 	
 	load_progress()
 	
@@ -400,7 +406,9 @@ func check_after_refill():
 	
 	
 	if not has_valid_moves():
+		show_shuffle_popup()
 		await shuffle_board()
+		hide_shuffle_popup()
 	state = MOVE
 	move_checked = false
 
@@ -429,7 +437,7 @@ func game_over(gano: bool):
 	level_timer.stop()
 	save_progress()
 	game_finished.emit(gano)
-	final_popup_requested.emit(gano, current_level_index + 1, get_final_message(gano))
+	final_popup_requested.emit(gano, current_level_index + 1, get_final_message(gano), has_next_level())
 	# TODO (PARCIAL · M4): guarda el progreso (nivel alcanzado) y el mejor puntaje
 	# en disco (user://) para conservarlos entre sesiones.
 
@@ -512,6 +520,35 @@ func _on_reset_progress_button_pressed():
 	config.set_value("progress", "best_score", 0)
 	config.save(SAVE_PATH)
 	get_tree().reload_current_scene()
+
+
+func retry_level():
+	get_tree().reload_current_scene()
+
+
+func go_to_next_level():
+	if has_next_level():
+		unlocked_level = max(unlocked_level, current_level_index + 1)
+		save_progress()
+		get_tree().reload_current_scene()
+
+
+func has_next_level() -> bool:
+	return current_level_index < levels.size() - 1
+
+
+func close_game():
+	get_tree().quit()
+
+
+func show_shuffle_popup():
+	if shuffle_popup != null:
+		shuffle_popup.visible = true
+
+
+func hide_shuffle_popup():
+	if shuffle_popup != null:
+		shuffle_popup.visible = false
 	
 
 func get_final_message(gano: bool) -> String:
@@ -633,6 +670,6 @@ func shuffle_board():
 	await get_tree().create_timer(0.5).timeout
 
 	if not has_valid_moves():
-		shuffle_board()
+		await shuffle_board()
 	else:
 		print("Tablero listo.")

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://cruh8bbcfvyvr"]
+[gd_scene load_steps=20 format=3 uid="uid://cruh8bbcfvyvr"]
 
 [ext_resource type="Texture2D" uid="uid://brp4euwugc18f" path="res://assets/background.png" id="1_blg2x"]
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
@@ -11,7 +11,12 @@
 [ext_resource type="Texture2D" path="res://assets/buttons/reset_progress.png" id="9_reset_progress"]
 [ext_resource type="Script" path="res://scripts/final_popup.gd" id="10_final_popup"]
 [ext_resource type="Texture2D" path="res://assets/popups/victory_popup.png" id="11_victory_popup"]
+[ext_resource type="Texture2D" path="res://assets/buttons/next_level.png" id="12_next_level"]
 [ext_resource type="FontFile" uid="uid://b25431rxog83j" path="res://assets/fonts/Kenney Blocks.ttf" id="13_font"]
+[ext_resource type="Texture2D" path="res://assets/buttons/retry.png" id="14_retry"]
+[ext_resource type="Texture2D" path="res://assets/popups/gold_star.png" id="15_gold_star"]
+[ext_resource type="Texture2D" path="res://assets/popups/silver_star.png" id="16_silver_star"]
+[ext_resource type="Texture2D" path="res://assets/popups/shuffling.png" id="17_shuffling"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_popup_level"]
 font = ExtResource("13_font")
@@ -68,6 +73,46 @@ one_shot = true
 [node name="refill_timer" type="Timer" parent="grid" unique_id=1082133694]
 wait_time = 0.5
 one_shot = true
+
+[node name="ShufflingPopup" type="CanvasLayer" parent="."]
+visible = false
+layer = 15
+
+[node name="Root" type="Control" parent="ShufflingPopup"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Dim" type="ColorRect" parent="ShufflingPopup/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.35)
+
+[node name="PopupTexture" type="TextureRect" parent="ShufflingPopup/Root"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -292.0
+offset_right = 240.0
+offset_bottom = 292.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("17_shuffling")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="FinalPopup" type="CanvasLayer" parent="."]
 layer = 20
@@ -131,6 +176,82 @@ label_settings = SubResource("LabelSettings_popup_message")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
+
+[node name="star_left" type="TextureRect" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 86.0
+offset_top = 168.0
+offset_right = 176.0
+offset_bottom = 258.0
+texture = ExtResource("15_gold_star")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="star_center" type="TextureRect" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 195.0
+offset_top = 150.0
+offset_right = 285.0
+offset_bottom = 240.0
+texture = ExtResource("15_gold_star")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="star_right" type="TextureRect" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 304.0
+offset_top = 168.0
+offset_right = 394.0
+offset_bottom = 258.0
+texture = ExtResource("16_silver_star")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="next_level_button" type="TextureButton" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 210.0
+offset_top = 400.0
+offset_right = 390.0
+offset_bottom = 520.0
+texture_normal = ExtResource("12_next_level")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="retry_button" type="TextureButton" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 210.0
+offset_top = 412.0
+offset_right = 390.0
+offset_bottom = 532.0
+texture_normal = ExtResource("14_retry")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="popup_reset_progress_button" type="TextureButton" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 210.0
+offset_top = 400.0
+offset_right = 390.0
+offset_bottom = 520.0
+texture_normal = ExtResource("9_reset_progress")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="close_button" type="Button" parent="FinalPopup/Root/PopupTexture"]
+visible = false
+layout_mode = 0
+offset_left = 392.0
+offset_top = 40.0
+offset_right = 456.0
+offset_bottom = 104.0
+text = ""
+flat = true
 
 [connection signal="timeout" from="grid/destroy_timer" to="grid" method="_on_destroy_timer_timeout"]
 [connection signal="timeout" from="grid/collapse_timer" to="grid" method="_on_collapse_timer_timeout"]
