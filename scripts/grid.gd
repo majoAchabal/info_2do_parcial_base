@@ -254,40 +254,121 @@ func find_matches():
 	# genera una pieza de línea (fila/columna) y una de 5 una bomba de color. El chequeo
 	# actual solo mira el "centro" de tríos; probablemente tengas que recorrer las
 	# líneas completas para distinguir combinaciones de 3, 4 y 5.
+	var horizontal_lines = []
+	var vertical_lines = []
+	var special_matches = {}
+
+	for j in height:
+		var i = 0
+		while i < width:
+			if all_pieces[i][j] == null:
+				i += 1
+				continue
+
+			var current_color = all_pieces[i][j].color
+			var line = []
+
+			while i < width and all_pieces[i][j] != null and all_pieces[i][j].color == current_color:
+				line.append(Vector2i(i, j))
+				i += 1
+
+			if line.size() >= 3:
+				horizontal_lines.append(line)
+				mark_match_line(line)
+
 	for i in width:
-		for j in height:
-			if all_pieces[i][j] != null:
-				var current_color = all_pieces[i][j].color
-				# detect horizontal matches
-				if (
-					i > 0 and i < width -1 
-					and 
-					all_pieces[i - 1][j] != null and all_pieces[i + 1][j]
-					and 
-					all_pieces[i - 1][j].color == current_color and all_pieces[i + 1][j].color == current_color
-				):
-					all_pieces[i - 1][j].matched = true
-					all_pieces[i - 1][j].dim()
-					all_pieces[i][j].matched = true
-					all_pieces[i][j].dim()
-					all_pieces[i + 1][j].matched = true
-					all_pieces[i + 1][j].dim()
-				# detect vertical matches
-				if (
-					j > 0 and j < height -1 
-					and 
-					all_pieces[i][j - 1] != null and all_pieces[i][j + 1]
-					and 
-					all_pieces[i][j - 1].color == current_color and all_pieces[i][j + 1].color == current_color
-				):
-					all_pieces[i][j - 1].matched = true
-					all_pieces[i][j - 1].dim()
-					all_pieces[i][j].matched = true
-					all_pieces[i][j].dim()
-					all_pieces[i][j + 1].matched = true
-					all_pieces[i][j + 1].dim()
-					
+		var j = 0
+		while j < height:
+			if all_pieces[i][j] == null:
+				j += 1
+				continue
+
+			var current_color = all_pieces[i][j].color
+			var line = []
+
+			while j < height and all_pieces[i][j] != null and all_pieces[i][j].color == current_color:
+				line.append(Vector2i(i, j))
+				j += 1
+
+			if line.size() >= 3:
+				vertical_lines.append(line)
+				mark_match_line(line)
+
+	for line in horizontal_lines:
+		if line.size() >= 5:
+			special_matches[choose_special_position(line)] = "rainbow"
+
+	for line in vertical_lines:
+		if line.size() >= 5:
+			special_matches[choose_special_position(line)] = "rainbow"
+
+	for horizontal_line in horizontal_lines:
+		for vertical_line in vertical_lines:
+			var intersection = get_line_intersection(horizontal_line, vertical_line)
+			if intersection != null and not line_has_rainbow(horizontal_line, special_matches) and not line_has_rainbow(vertical_line, special_matches):
+				special_matches[intersection] = "adjacent"
+
+	for line in horizontal_lines:
+		if line.size() == 4 and not line_has_special(line, special_matches):
+			special_matches[choose_special_position(line)] = "row"
+
+	for line in vertical_lines:
+		if line.size() == 4 and not line_has_special(line, special_matches):
+			special_matches[choose_special_position(line)] = "column"
+
+	for special_position in special_matches:
+		var piece = all_pieces[special_position.x][special_position.y]
+		if piece != null:
+			piece.set_special(special_matches[special_position])
+	
 	destroy_timer.start()
+
+
+func mark_match_line(line):
+	for grid_position in line:
+		var piece = all_pieces[grid_position.x][grid_position.y]
+		if piece != null:
+			piece.matched = true
+			piece.dim()
+
+
+func choose_special_position(line):
+	if piece_one != null:
+		for grid_position in line:
+			if all_pieces[grid_position.x][grid_position.y] == piece_one:
+				return grid_position
+
+	if piece_two != null:
+		for grid_position in line:
+			if all_pieces[grid_position.x][grid_position.y] == piece_two:
+				return grid_position
+
+	return line[1]
+
+
+func get_line_intersection(horizontal_line, vertical_line):
+	for horizontal_position in horizontal_line:
+		for vertical_position in vertical_line:
+			if horizontal_position == vertical_position:
+				return horizontal_position
+
+	return null
+
+
+func line_has_special(line, special_matches):
+	for grid_position in line:
+		if special_matches.has(grid_position):
+			return true
+
+	return false
+
+
+func line_has_rainbow(line, special_matches):
+	for grid_position in line:
+		if special_matches.has(grid_position) and special_matches[grid_position] == "rainbow":
+			return true
+
+	return false
 	
 func destroy_matched():
 	var was_matched = false
