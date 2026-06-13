@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cruh8bbcfvyvr"]
+[gd_scene load_steps=15 format=3 uid="uid://cruh8bbcfvyvr"]
 
 [ext_resource type="Texture2D" uid="uid://brp4euwugc18f" path="res://assets/background.png" id="1_blg2x"]
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
@@ -9,6 +9,19 @@
 [ext_resource type="Resource" uid="uid://w7baeiaaggmn" path="res://levels/level_2.tres" id="7_vtaks"]
 [ext_resource type="Resource" uid="uid://daynvcp2g3ecx" path="res://levels/level_3.tres" id="8_kvpfn"]
 [ext_resource type="Texture2D" path="res://assets/buttons/reset_progress.png" id="9_reset_progress"]
+[ext_resource type="Script" path="res://scripts/final_popup.gd" id="10_final_popup"]
+[ext_resource type="Texture2D" path="res://assets/popups/victory_popup.png" id="11_victory_popup"]
+[ext_resource type="FontFile" uid="uid://b25431rxog83j" path="res://assets/fonts/Kenney Blocks.ttf" id="13_font"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_popup_level"]
+font = ExtResource("13_font")
+font_size = 26
+font_color = Color(0.0431373, 0.0705882, 0.231373, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_popup_message"]
+font = ExtResource("13_font")
+font_size = 16
+font_color = Color(1, 1, 1, 1)
 
 [node name="Game" type="Node2D" unique_id=495977709]
 
@@ -55,6 +68,69 @@ one_shot = true
 [node name="refill_timer" type="Timer" parent="grid" unique_id=1082133694]
 wait_time = 0.5
 one_shot = true
+
+[node name="FinalPopup" type="CanvasLayer" parent="."]
+layer = 20
+script = ExtResource("10_final_popup")
+
+[node name="Root" type="Control" parent="FinalPopup"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Dim" type="ColorRect" parent="FinalPopup/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.5)
+
+[node name="PopupTexture" type="TextureRect" parent="FinalPopup/Root"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -292.0
+offset_right = 240.0
+offset_bottom = 292.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("11_victory_popup")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LevelLabel" type="Label" parent="FinalPopup/Root/PopupTexture"]
+layout_mode = 0
+offset_left = 90.0
+offset_top = 296.0
+offset_right = 390.0
+offset_bottom = 350.0
+text = "Level 1"
+label_settings = SubResource("LabelSettings_popup_level")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MessageLabel" type="Label" parent="FinalPopup/Root/PopupTexture"]
+layout_mode = 0
+offset_left = 76.0
+offset_top = 348.0
+offset_right = 404.0
+offset_bottom = 426.0
+text = "Congratulations"
+label_settings = SubResource("LabelSettings_popup_message")
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
 
 [connection signal="timeout" from="grid/destroy_timer" to="grid" method="_on_destroy_timer_timeout"]
 [connection signal="timeout" from="grid/collapse_timer" to="grid" method="_on_collapse_timer_timeout"]

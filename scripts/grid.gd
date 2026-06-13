@@ -54,6 +54,7 @@ signal score_changed(nuevo_puntaje: int)
 signal counter_changed(restantes: int)
 signal level_changed(nivel: int)
 signal game_finished(gano: bool)
+signal final_popup_requested(gano: bool, nivel: int, mensaje: String)
 
 var current_score = 0
 var moves_left = 20
@@ -75,6 +76,8 @@ const SAVE_PATH := "user://save_game.cfg"
 
 var unlocked_level = 0
 var best_score = 0
+var is_game_finished = false
+var final_popup = null
 
 
 # Called when the node enters the scene tree for the first time.
@@ -85,10 +88,13 @@ func _ready():
 	spawn_pieces()
 	
 	var ui = get_parent().get_node("top_ui")
+	final_popup = get_parent().get_node_or_null("FinalPopup")
 	
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
 	level_changed.connect(ui.update_level)
+	if final_popup != null:
+		final_popup_requested.connect(final_popup.show_popup)
 	
 	load_progress()
 	
@@ -224,7 +230,7 @@ func _process(delta):
 	if Input.is_action_just_pressed("ui_accept"):
 		show_hint()
 	
-	if state == MOVE:
+	if state == MOVE and not is_game_finished:
 		touch_input()
 
 func find_matches():
@@ -377,6 +383,10 @@ func check_after_refill():
 			):
 				game_over(true)
 				return
+
+			if moves_left <= 0:
+				game_over(false)
+				return
 			
 		
 		LevelConfig.Objetivo.TIME_SCORE:
@@ -404,6 +414,9 @@ func _on_refill_timer_timeout():
 	refill_columns()
 	
 func game_over(gano: bool):
+	if is_game_finished:
+		return
+	is_game_finished = true
 	state = WAIT
 	# TODO (PARCIAL · B3): muestra la pantalla final (victoria o derrota), detén la
 	# entrada del jugador y ofrece reiniciar la partida. Emite game_finished(gano).
@@ -413,10 +426,10 @@ func game_over(gano: bool):
 	else:
 		print("DERROTA")
 		
+	level_timer.stop()
 	save_progress()
-	
-	await  get_tree().create_timer(2.0).timeout
-	get_tree().reload_current_scene()
+	game_finished.emit(gano)
+	final_popup_requested.emit(gano, current_level_index + 1, get_final_message(gano))
 	# TODO (PARCIAL · M4): guarda el progreso (nivel alcanzado) y el mejor puntaje
 	# en disco (user://) para conservarlos entre sesiones.
 
@@ -499,6 +512,21 @@ func _on_reset_progress_button_pressed():
 	config.set_value("progress", "best_score", 0)
 	config.save(SAVE_PATH)
 	get_tree().reload_current_scene()
+	
+
+func get_final_message(gano: bool) -> String:
+	if gano:
+		return "Congratulations"
+
+	match current_level_index:
+		0:
+			return "Youre out of moves"
+		1:
+			return "You ran out of time"
+		2:
+			return "You didnt collect all the pieces"
+
+	return "Game over"
 	
 
 func hay_match_after_swap(col: int, row: int, dir: Vector2) -> bool:
