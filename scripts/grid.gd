@@ -211,7 +211,11 @@ func swap_pieces(column, row, direction: Vector2, consume_move:=true):
 	# TODO (PARCIAL · B2): un intercambio válido consume una jugada. Decide dónde
 	# descontar el contador: aquí, o en destroy_matched() solo si hubo combinación.
 	pending_player_move = consume_move
-		
+
+	if consume_move and activate_swapped_specials(column, row, direction):
+		destroy_timer.start()
+		return
+
 	if not move_checked:
 		find_matches()
 
@@ -332,6 +336,89 @@ func mark_match_line(line):
 			piece.dim()
 
 
+func activate_swapped_specials(column, row, direction: Vector2) -> bool:
+	var activated = false
+	var first_piece_position = Vector2i(column + direction.x, row + direction.y)
+	var other_piece_position = Vector2i(column, row)
+	var first_piece = all_pieces[first_piece_position.x][first_piece_position.y]
+	var other_piece = all_pieces[other_piece_position.x][other_piece_position.y]
+
+	if activate_rainbow(first_piece, first_piece_position.x, first_piece_position.y, other_piece):
+		return true
+	if activate_rainbow(other_piece, other_piece_position.x, other_piece_position.y, first_piece):
+		return true
+
+	if activate_special(first_piece, first_piece_position.x, first_piece_position.y):
+		activated = true
+	if activate_special(other_piece, other_piece_position.x, other_piece_position.y):
+		activated = true
+
+	return activated
+
+
+func activate_rainbow(rainbow_piece, rainbow_column, rainbow_row, target_piece) -> bool:
+	if rainbow_piece == null or rainbow_piece.special_type != "rainbow":
+		return false
+
+	rainbow_piece.matched = true
+	rainbow_piece.dim()
+
+	if target_piece != null and target_piece.color != "":
+		mark_color(target_piece.color)
+	else:
+		# TODO (PARCIAL · M3): decidir qué hacer con Rainbow + Rainbow o pieza sin color.
+		print("Rainbow sin color objetivo.")
+
+	return true
+
+
+func activate_special(piece, column, row) -> bool:
+	if piece == null:
+		return false
+
+	if piece.special_type == "row":
+		mark_row(row)
+		return true
+	elif piece.special_type == "column":
+		mark_column(column)
+		return true
+	elif piece.special_type == "adjacent":
+		mark_adjacent(column, row)
+		return true
+
+	return false
+
+
+func mark_row(row):
+	for i in width:
+		if all_pieces[i][row] != null:
+			all_pieces[i][row].matched = true
+			all_pieces[i][row].dim()
+
+
+func mark_column(column):
+	for j in height:
+		if all_pieces[column][j] != null:
+			all_pieces[column][j].matched = true
+			all_pieces[column][j].dim()
+
+
+func mark_adjacent(column, row):
+	for i in range(column - 1, column + 2):
+		for j in range(row - 1, row + 2):
+			if in_grid(i, j) and all_pieces[i][j] != null:
+				all_pieces[i][j].matched = true
+				all_pieces[i][j].dim()
+
+
+func mark_color(color_name):
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null and all_pieces[i][j].color == color_name:
+				all_pieces[i][j].matched = true
+				all_pieces[i][j].dim()
+
+
 func choose_special_position(line):
 	if piece_one != null:
 		for grid_position in line:
@@ -371,6 +458,7 @@ func line_has_rainbow(line, special_matches):
 	return false
 	
 func destroy_matched():
+	activate_matched_specials()
 	var was_matched = false
 	for i in width:
 		for j in height:
@@ -415,6 +503,20 @@ func destroy_matched():
 		play_sfx("invalid")
 		pending_player_move = false
 		swap_back()
+
+
+func activate_matched_specials():
+	var specials_to_activate = []
+
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null and all_pieces[i][j].matched:
+				if all_pieces[i][j].special_type == "row" or all_pieces[i][j].special_type == "column" or all_pieces[i][j].special_type == "adjacent":
+					specials_to_activate.append(Vector2i(i, j))
+
+	for special_position in specials_to_activate:
+		var piece = all_pieces[special_position.x][special_position.y]
+		activate_special(piece, special_position.x, special_position.y)
 
 func collapse_columns():
 	for i in width:
