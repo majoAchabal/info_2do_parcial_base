@@ -383,6 +383,9 @@ func check_after_refill():
 				game_over(false)
 				return
 	
+	
+	if not has_valid_moves():
+		await shuffle_board()
 	state = MOVE
 	move_checked = false
 
@@ -484,3 +487,97 @@ func save_progress():
 # TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
 # func hay_jugadas_validas() -> bool:
 # func rebarajar() -> void:
+
+func hay_match_after_swap(col: int, row: int, dir: Vector2) -> bool:
+	var other_col = col + int(dir.x)
+	var other_row = row + int(dir.y)
+
+	if not in_grid(other_col, other_row):
+		return false
+
+	var piece_a = all_pieces[col][row]
+	var piece_b = all_pieces[other_col][other_row]
+
+	if piece_a == null or piece_b == null:
+		return false
+
+	all_pieces[col][row] = piece_b
+	all_pieces[other_col][other_row] = piece_a
+
+	var result = hay_match(col, row) or hay_match(other_col, other_row)
+
+	all_pieces[col][row] = piece_a
+	all_pieces[other_col][other_row] = piece_b
+
+	return result
+
+
+func hay_match(col: int, row: int) -> bool:
+	if not in_grid(col, row) or all_pieces[col][row] == null:
+		return false
+
+	var color = all_pieces[col][row].color
+
+	var x_count = 1
+	var c = col - 1
+	while c >= 0 and all_pieces[c][row] != null and all_pieces[c][row].color == color:
+		x_count += 1
+		c -= 1
+
+	c = col + 1
+	while c < width and all_pieces[c][row] != null and all_pieces[c][row].color == color:
+		x_count += 1
+		c += 1
+
+	var y_count = 1
+	var r = row - 1
+	while r >= 0 and all_pieces[col][r] != null and all_pieces[col][r].color == color:
+		y_count += 1
+		r -= 1
+
+	r = row + 1
+	while r < height and all_pieces[col][r] != null and all_pieces[col][r].color == color:
+		y_count += 1
+		r += 1
+
+	return x_count >= 3 or y_count >= 3
+
+
+func has_valid_moves() -> bool:
+	for i in width:
+		for j in height:
+			if hay_match_after_swap(i, j, Vector2(1, 0)):
+				return true
+			if hay_match_after_swap(i, j, Vector2(0, 1)):
+				return true
+
+	return false
+
+
+func shuffle_board():
+	print("No hay jugadas válidas. Rebarajando...")
+
+	var pieces = []
+
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null:
+				pieces.append(all_pieces[i][j])
+				all_pieces[i][j] = null
+
+	pieces.shuffle()
+
+	var index = 0
+	for i in width:
+		for j in height:
+			var piece = pieces[index]
+			index += 1
+			all_pieces[i][j] = piece
+			piece.move(grid_to_pixel(i, j))
+
+	await get_tree().create_timer(0.5).timeout
+
+	if not has_valid_moves():
+		shuffle_board()
+	else:
+		print("Tablero listo.")
