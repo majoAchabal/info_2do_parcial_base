@@ -55,6 +55,8 @@ signal counter_changed(restantes: int)
 signal level_changed(nivel: int)
 signal game_finished(gano: bool)
 signal final_popup_requested(gano: bool, nivel: int, mensaje: String, has_next_level: bool)
+signal collect_goals_changed(is_collect_level: bool, pink_goal: int, yellow_goal: int, blue_goal: int)
+signal collect_progress_changed(pink: int, yellow: int, blue: int)
 
 var current_score = 0
 var moves_left = 20
@@ -80,6 +82,7 @@ var is_game_finished = false
 var final_popup = null
 var shuffle_popup = null
 var audio_manager = null
+var collect_goal_ui = null
 
 
 # Called when the node enters the scene tree for the first time.
@@ -93,6 +96,7 @@ func _ready():
 	final_popup = get_parent().get_node_or_null("FinalPopup")
 	shuffle_popup = get_parent().get_node_or_null("ShufflingPopup")
 	audio_manager = get_parent().get_node_or_null("AudioManager")
+	collect_goal_ui = get_parent().get_node_or_null("CollectGoalUI")
 	
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
@@ -103,6 +107,9 @@ func _ready():
 		final_popup.next_level_pressed.connect(go_to_next_level)
 		final_popup.reset_progress_pressed.connect(_on_reset_progress_button_pressed)
 		final_popup.close_pressed.connect(close_game)
+	if collect_goal_ui != null:
+		collect_goals_changed.connect(collect_goal_ui.setup_goals)
+		collect_progress_changed.connect(collect_goal_ui.update_progress)
 	
 	load_progress()
 	
@@ -314,6 +321,7 @@ func destroy_matched():
 	move_checked = true
 	if was_matched:
 		play_sfx("match")
+		emit_collect_progress()
 		if pending_player_move:
 			play_sfx("swap")
 		if pending_player_move and level_data != null and level_data.limite_movimientos > 0:
@@ -476,6 +484,15 @@ func load_level():
 	collected_pink = 0
 	collected_yellow = 0
 	
+	var is_collect_level = level_data.objetivo_tipo == LevelConfig.Objetivo.COLLECT
+	collect_goals_changed.emit(
+		is_collect_level,
+		level_data.objetivo_pink,
+		level_data.objetivo_yellow,
+		level_data.objetivo_blue
+	)
+	emit_collect_progress()
+	
 
 func get_counter_value() -> int:
 	if level_data != null and level_data.limite_segundos > 0:
@@ -570,6 +587,10 @@ func hide_shuffle_popup():
 func play_sfx(sound_name: String):
 	if audio_manager != null:
 		audio_manager.play_sfx(sound_name)
+
+
+func emit_collect_progress():
+	collect_progress_changed.emit(collected_pink, collected_yellow, collected_blue)
 	
 
 func get_final_message(gano: bool) -> String:
@@ -582,9 +603,19 @@ func get_final_message(gano: bool) -> String:
 		1:
 			return "You ran out of time"
 		2:
-			return "You didnt collect all the pieces"
+			return str(get_missing_collect_pieces()) + " pieces missing"
 
 	return "Game over"
+
+
+func get_missing_collect_pieces() -> int:
+	if level_data == null:
+		return 0
+
+	var missing_pink = max(level_data.objetivo_pink - collected_pink, 0)
+	var missing_yellow = max(level_data.objetivo_yellow - collected_yellow, 0)
+	var missing_blue = max(level_data.objetivo_blue - collected_blue, 0)
+	return missing_pink + missing_yellow + missing_blue
 	
 
 func hay_match_after_swap(col: int, row: int, dir: Vector2) -> bool:

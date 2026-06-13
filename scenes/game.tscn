@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://cruh8bbcfvyvr"]
+[gd_scene load_steps=26 format=3 uid="uid://cruh8bbcfvyvr"]
 
 [ext_resource type="Texture2D" uid="uid://brp4euwugc18f" path="res://assets/background.png" id="1_blg2x"]
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
@@ -18,6 +18,10 @@
 [ext_resource type="Texture2D" path="res://assets/popups/silver_star.png" id="16_silver_star"]
 [ext_resource type="Texture2D" path="res://assets/popups/shuffling.png" id="17_shuffling"]
 [ext_resource type="Script" path="res://scripts/audio_manager.gd" id="18_audio_manager"]
+[ext_resource type="Script" path="res://scripts/collect_goal_ui.gd" id="19_collect_goal_ui"]
+[ext_resource type="Texture2D" path="res://assets/pieces/Pink Piece.png" id="20_pink_piece"]
+[ext_resource type="Texture2D" path="res://assets/pieces/Yellow Piece.png" id="21_yellow_piece"]
+[ext_resource type="Texture2D" path="res://assets/pieces/Blue Piece.png" id="22_blue_piece"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_popup_level"]
 font = ExtResource("13_font")
@@ -27,6 +31,11 @@ font_color = Color(0.0431373, 0.0705882, 0.231373, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_popup_message"]
 font = ExtResource("13_font")
 font_size = 16
+font_color = Color(1, 1, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_collect_goal"]
+font = ExtResource("13_font")
+font_size = 22
 font_color = Color(1, 1, 1, 1)
 
 [node name="Game" type="Node2D" unique_id=495977709]
@@ -43,6 +52,80 @@ offset_top = 928.0
 offset_right = 576.0
 offset_bottom = 1020.0
 texture = ExtResource("3_jy0d4")
+
+[node name="CollectGoalUI" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_left = 48.0
+offset_top = 942.0
+offset_right = 528.0
+offset_bottom = 1000.0
+script = ExtResource("19_collect_goal_ui")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CollectGoalUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="PinkGoal" type="HBoxContainer" parent="CollectGoalUI/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="PinkIcon" type="TextureRect" parent="CollectGoalUI/HBoxContainer/PinkGoal"]
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+texture = ExtResource("20_pink_piece")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PinkLabel" type="Label" parent="CollectGoalUI/HBoxContainer/PinkGoal"]
+layout_mode = 2
+text = "0/0"
+label_settings = SubResource("LabelSettings_collect_goal")
+vertical_alignment = 1
+
+[node name="YellowGoal" type="HBoxContainer" parent="CollectGoalUI/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="YellowIcon" type="TextureRect" parent="CollectGoalUI/HBoxContainer/YellowGoal"]
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+texture = ExtResource("21_yellow_piece")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="YellowLabel" type="Label" parent="CollectGoalUI/HBoxContainer/YellowGoal"]
+layout_mode = 2
+text = "0/0"
+label_settings = SubResource("LabelSettings_collect_goal")
+vertical_alignment = 1
+
+[node name="BlueGoal" type="HBoxContainer" parent="CollectGoalUI/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="BlueIcon" type="TextureRect" parent="CollectGoalUI/HBoxContainer/BlueGoal"]
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+texture = ExtResource("22_blue_piece")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BlueLabel" type="Label" parent="CollectGoalUI/HBoxContainer/BlueGoal"]
+layout_mode = 2
+text = "0/0"
+label_settings = SubResource("LabelSettings_collect_goal")
+vertical_alignment = 1
 
 [node name="reset_progress_button" type="TextureButton" parent="." unique_id=2055056134]
 offset_left = 398.0
