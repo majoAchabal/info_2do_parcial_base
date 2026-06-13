@@ -76,7 +76,6 @@ var unlocked_level = 0
 var best_score = 0
 
 
-
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	state = MOVE
@@ -219,6 +218,9 @@ func touch_difference(grid_1, grid_2):
 			swap_pieces(grid_1.x, grid_1.y, Vector2(0, -1))
 
 func _process(delta):
+	if Input.is_action_just_pressed("ui_accept"):
+		show_hint()
+	
 	if state == MOVE:
 		touch_input()
 
@@ -552,6 +554,20 @@ func has_valid_moves() -> bool:
 				return true
 
 	return false
+	
+
+func show_hint():
+	for i in width:
+		for j in height:
+			if hay_match_after_swap(i, j, Vector2(1, 0)):
+				print("PISTA: mueve la pieza en columna ", i, ", fila ", j, " hacia la derecha.")
+				return
+
+			if hay_match_after_swap(i, j, Vector2(0, 1)):
+				print("PISTA: mueve la pieza en columna ", i, ", fila ", j, " hacia arriba.")
+				return
+
+	print("No hay pista disponible.")
 
 
 func shuffle_board():
