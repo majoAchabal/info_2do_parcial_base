@@ -6,14 +6,25 @@ extends Resource
 # carga la lista de niveles desde grid.gd. Puedes añadir, quitar o renombrar campos
 # según el diseño de tus objetivos; esto es solo una sugerencia de estructura.
 
-enum Objetivo { PUNTAJE, RECOLECTAR_COLOR }
+enum Objetivo 
+{
+	SCORE,
+	TIME_SCORE,
+	COLLECT
+}
 
 @export var nombre: String = "Nivel 1"
-@export var objetivo_tipo: Objetivo = Objetivo.PUNTAJE
-@export var objetivo_valor: int = 1000            # puntaje meta, o cantidad a recolectar
-@export var objetivo_color: String = "blue"       # solo si objetivo_tipo == RECOLECTAR_COLOR
-@export var limite_movimientos: int = 20          # 0 = sin límite de movimientos
-@export var limite_segundos: int = 0              # 0 = sin límite de tiempo
+@export var objetivo_tipo: Objetivo = Objetivo.SCORE
+
+@export var objetivo_puntaje: int = 0
+
+@export var limite_movimientos: int = 200
+@export var limite_segundos: int = 0
+
+@export var objetivo_pink: int = 0
+@export var objetivo_yellow: int = 0
+@export var objetivo_blue: int = 0
+
 @export var colores_disponibles: Array[String] = [
 	"blue", "green", "light_green", "pink", "yellow", "orange",
 ]

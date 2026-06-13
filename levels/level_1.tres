@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="LevelConfig" format=3 uid="uid://do6utrf2d383q"]
+
+[ext_resource type="Script" uid="uid://blhm7y1ddy3c6" path="res://scripts/level_config.gd" id="1_8g6tw"]
+
+[resource]
+script = ExtResource("1_8g6tw")
+objetivo_puntaje = 9250
+metadata/_custom_type_script = "uid://blhm7y1ddy3c6"

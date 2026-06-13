@@ -4,6 +4,10 @@
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
 [ext_resource type="Texture2D" uid="uid://cdunkljd6up72" path="res://assets/bottom_ui.png" id="3_jy0d4"]
 [ext_resource type="Script" uid="uid://biuagxx08tqcb" path="res://scripts/grid.gd" id="4_4jr62"]
+[ext_resource type="Script" uid="uid://blhm7y1ddy3c6" path="res://scripts/level_config.gd" id="5_gee14"]
+[ext_resource type="Resource" uid="uid://do6utrf2d383q" path="res://levels/level_1.tres" id="6_0tnpc"]
+[ext_resource type="Resource" uid="uid://w7baeiaaggmn" path="res://levels/level_2.tres" id="7_vtaks"]
+[ext_resource type="Resource" uid="uid://daynvcp2g3ecx" path="res://levels/level_3.tres" id="8_kvpfn"]
 
 [node name="Game" type="Node2D" unique_id=495977709]
 
@@ -28,6 +32,7 @@ x_start = 64
 y_start = 800
 offset = 64
 y_offset = 2
+levels = Array[ExtResource("5_gee14")]([ExtResource("6_0tnpc"), ExtResource("7_vtaks"), ExtResource("8_kvpfn")])
 
 [node name="destroy_timer" type="Timer" parent="grid" unique_id=2010254565]
 wait_time = 0.5

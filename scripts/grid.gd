@@ -41,6 +41,7 @@ var is_controlling = false
 @onready var destroy_timer: Timer = $destroy_timer
 @onready var collapse_timer: Timer = $collapse_timer
 @onready var refill_timer: Timer = $refill_timer
+@onready  var level_timer: Timer  = Timer.new()
 
 # === PUNTAJE (B1) y CONTADOR (B2) ===
 # Contrato sugerido para comunicarte con el HUD (top_ui.gd). No es obligatorio usar
@@ -56,6 +57,17 @@ var current_score = 0
 var moves_left = 20
 var target_score = 10000
 
+#Levels
+@export var levels: Array[LevelConfig] = []
+var current_level_index = 1
+var level_data: LevelConfig
+
+var time_left = 0
+
+var collected_pink = 0
+var collected_yellow = 0
+var collected_blue = 0
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	state = MOVE
@@ -68,8 +80,17 @@ func _ready():
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
 	
+	load_level()
+	
+	add_child(level_timer)
+	
+	if time_left > 0:
+		level_timer.wait_time = 1.0
+		level_timer.timeout.connect(_on_level_timer_timeout)
+		level_timer.start()
+	
 	score_changed.emit(current_score)
-	counter_changed.emit(moves_left)
+	counter_changed.emit(get_counter_value())
 
 func make_2d_array():
 	var array = []
@@ -155,8 +176,10 @@ func swap_pieces(column, row, direction: Vector2):
 	# actívala aquí (su efecto reemplaza a la búsqueda normal de combinaciones).
 	# TODO (PARCIAL · B2): un intercambio válido consume una jugada. Decide dónde
 	# descontar el contador: aquí, o en destroy_matched() solo si hubo combinación.
-	moves_left -= 1
-	counter_changed.emit(moves_left)
+	if level_data != null and level_data.limite_movimientos > 0:
+		moves_left -= 1
+		counter_changed.emit(moves_left)
+		
 	if not move_checked:
 		find_matches()
 
@@ -241,6 +264,22 @@ func destroy_matched():
 				# combinación) y emite score_changed para actualizar el HUD.
 				current_score += 100
 				score_changed.emit(current_score)
+				
+				match all_pieces[i][j].color:
+					"pink":
+						collected_pink += 1
+					"yellow":
+						collected_yellow += 1
+					"blue":
+						collected_blue += 1
+						
+				print(
+					"Pink: ", collected_pink, "/", level_data.objetivo_pink,
+					" Yellow: ", collected_yellow, "/", level_data.objetivo_yellow,
+					" Blue: ", collected_blue, "/", level_data.objetivo_blue
+				)
+
+				
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 
@@ -299,13 +338,35 @@ func check_after_refill():
 	# (puntaje meta, piezas recolectadas, etc.) y dispara victoria o derrota.
 	# TODO (PARCIAL · M2): comprueba si todavía existe alguna jugada válida; si no,
 	# rebaraja el tablero hasta que haya al menos una.
-	if current_score >= target_score:
-		game_over(true)
-		return
-	
-	if moves_left <= 0:
-		game_over(false)
-		return 
+	match level_data.objetivo_tipo:
+		LevelConfig.Objetivo.SCORE:
+			if current_score >= level_data.objetivo_puntaje:
+				game_over(true)
+				return
+			
+			if moves_left <= 0:
+				game_over(false)
+				return
+		
+
+		LevelConfig.Objetivo.COLLECT:
+			if (
+				collected_pink >= level_data.objetivo_pink
+				and collected_yellow >= level_data.objetivo_yellow
+				and collected_blue >= level_data.objetivo_blue
+			):
+				game_over(true)
+				return
+			
+		
+		LevelConfig.Objetivo.TIME_SCORE:
+			if current_score >= level_data.objetivo_puntaje:
+				game_over(true)
+				return
+
+			if time_left <= 0:
+				game_over(false)
+				return
 	
 	state = MOVE
 	move_checked = false
@@ -332,6 +393,47 @@ func game_over(gano: bool):
 	get_tree().reload_current_scene()
 	# TODO (PARCIAL · M4): guarda el progreso (nivel alcanzado) y el mejor puntaje
 	# en disco (user://) para conservarlos entre sesiones.
+
+
+func load_level():
+	if levels.is_empty():
+		push_error("No hay niveles asignados en el Inspector.")
+		return
+	
+	if current_level_index < 0 or current_level_index >= levels.size():
+		push_error("current_level_index fuera de rango.")
+		return
+	
+	level_data = levels[current_level_index]
+	
+	if level_data == null:
+		push_error("El nivel cargado es null. Revisa los .tres en el Inspector.")
+		return
+	
+	print("Cargando: ", level_data.nombre)
+	
+	target_score = level_data.objetivo_puntaje
+	moves_left = level_data.limite_movimientos
+	time_left = level_data.limite_segundos
+	
+	current_score = 0
+	collected_blue = 0
+	collected_pink = 0
+	collected_yellow = 0
+	
+
+func get_counter_value() -> int:
+	if level_data != null and level_data.limite_segundos > 0:
+			return time_left
+	return moves_left
+	
+func _on_level_timer_timeout():
+	time_left -= 1
+	counter_changed.emit(time_left)
+
+	if time_left <= 0:
+		level_timer.stop()
+		game_over(false)
 
 # TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
 # func hay_jugadas_validas() -> bool:
