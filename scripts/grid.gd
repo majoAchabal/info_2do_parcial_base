@@ -30,6 +30,7 @@ var piece_two = null
 var last_place = Vector2.ZERO
 var last_direction = Vector2.ZERO
 var move_checked = false
+var pending_player_move = false
 
 # touch variables
 var first_touch = Vector2.ZERO
@@ -59,7 +60,7 @@ var target_score = 10000
 
 #Levels
 @export var levels: Array[LevelConfig] = []
-var current_level_index = 1
+var current_level_index = 0
 var level_data: LevelConfig
 
 var time_left = 0
@@ -67,6 +68,14 @@ var time_left = 0
 var collected_pink = 0
 var collected_yellow = 0
 var collected_blue = 0
+
+# Persistencia de datos
+const SAVE_PATH := "user://save_game.cfg"
+
+var unlocked_level = 0
+var best_score = 0
+
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -79,6 +88,8 @@ func _ready():
 	
 	score_changed.connect(ui.update_score)
 	counter_changed.connect(ui.update_counter)
+	
+	load_progress()
 	
 	load_level()
 	
@@ -158,7 +169,7 @@ func touch_input():
 		final_touch = grid_pos
 		touch_difference(first_touch, final_touch)
 
-func swap_pieces(column, row, direction: Vector2):
+func swap_pieces(column, row, direction: Vector2, consume_move:=true):
 	var first_piece = all_pieces[column][row]
 	var other_piece = all_pieces[column + direction.x][row + direction.y]
 	if first_piece == null or other_piece == null:
@@ -176,9 +187,7 @@ func swap_pieces(column, row, direction: Vector2):
 	# actívala aquí (su efecto reemplaza a la búsqueda normal de combinaciones).
 	# TODO (PARCIAL · B2): un intercambio válido consume una jugada. Decide dónde
 	# descontar el contador: aquí, o en destroy_matched() solo si hubo combinación.
-	if level_data != null and level_data.limite_movimientos > 0:
-		moves_left -= 1
-		counter_changed.emit(moves_left)
+	pending_player_move = consume_move
 		
 	if not move_checked:
 		find_matches()
@@ -191,7 +200,7 @@ func store_info(first_piece, other_piece, place, direction):
 
 func swap_back():
 	if piece_one != null and piece_two != null:
-		swap_pieces(last_place.x, last_place.y, last_direction)
+		swap_pieces(last_place.x, last_place.y, last_direction, false)
 	state = MOVE
 	move_checked = false
 
@@ -285,8 +294,14 @@ func destroy_matched():
 
 	move_checked = true
 	if was_matched:
+		if pending_player_move and level_data != null and level_data.limite_movimientos > 0:
+			moves_left -= 1
+			counter_changed.emit(moves_left)
+
+		pending_player_move = false
 		collapse_timer.start()
 	else:
+		pending_player_move = false
 		swap_back()
 
 func collapse_columns():
@@ -386,8 +401,11 @@ func game_over(gano: bool):
 	# entrada del jugador y ofrece reiniciar la partida. Emite game_finished(gano).
 	if gano:
 		print("VICTORIA")
+		unlocked_level = min(current_level_index + 1, levels.size() -1)
 	else:
 		print("DERROTA")
+		
+	save_progress()
 	
 	await  get_tree().create_timer(2.0).timeout
 	get_tree().reload_current_scene()
@@ -434,6 +452,34 @@ func _on_level_timer_timeout():
 	if time_left <= 0:
 		level_timer.stop()
 		game_over(false)
+
+func load_progress():
+	var config = ConfigFile.new()
+	var error = config.load(SAVE_PATH)
+	
+	if error != OK:
+		unlocked_level = 0
+		best_score = 0
+		current_level_index = 0
+		print("No hay save previo. Nivel actual: 1 | Mejor puntaje: 0")
+		return 
+	
+	unlocked_level = config.get_value("progress", "unlocked_level", 0)
+	best_score = config.get_value("progress", "best_score", 0)
+
+	current_level_index = unlocked_level
+	print("Save cargado. Nivel actual: ", current_level_index + 1, " | Mejor puntaje: ", best_score)
+	
+
+func save_progress():
+	best_score = max(best_score, current_score)
+
+	var config = ConfigFile.new()
+	config.set_value("progress", "unlocked_level", unlocked_level)
+	config.set_value("progress", "best_score", best_score)
+
+	config.save(SAVE_PATH)
+	
 
 # TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
 # func hay_jugadas_validas() -> bool:

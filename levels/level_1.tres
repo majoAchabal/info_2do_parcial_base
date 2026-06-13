@@ -5,4 +5,5 @@
 [resource]
 script = ExtResource("1_8g6tw")
 objetivo_puntaje = 9250
+limite_movimientos = 30
 metadata/_custom_type_script = "uid://blhm7y1ddy3c6"
