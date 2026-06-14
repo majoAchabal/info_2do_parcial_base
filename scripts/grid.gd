@@ -1,5 +1,10 @@
 extends Node2D
 
+const STAR_PARTICLE_TEXTURE = preload("res://assets/Particles and effects/Star Particle.png")
+const GREAT_TEXTURE = preload("res://assets/popups/great.png")
+const AMAZING_TEXTURE = preload("res://assets/popups/amazing.png")
+const SUPER_TEXTURE = preload("res://assets/popups/super.png")
+
 # state machine
 enum {WAIT, MOVE}
 var state
@@ -92,11 +97,15 @@ var hint_original_sprite_scales = []
 var hint_original_sprite_positions = []
 var hint_tween = null
 var hint_animation_time = 0.0
+var game_original_position = Vector2.ZERO
+var shake_tween = null
+var combo_text = null
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	state = MOVE
+	game_original_position = get_parent().position
 	randomize()
 	all_pieces = make_2d_array()
 	spawn_pieces()
@@ -362,17 +371,22 @@ func activate_swapped_specials(column, row, direction: Vector2) -> bool:
 	var other_piece = all_pieces[other_piece_position.x][other_piece_position.y]
 
 	if activate_special_combo(first_piece, first_piece_position, other_piece, other_piece_position):
+		shake_screen(7.0, 0.25)
 		return true
 
 	if activate_rainbow(first_piece, first_piece_position.x, first_piece_position.y, other_piece):
+		shake_screen(6.0, 0.22)
 		return true
 	if activate_rainbow(other_piece, other_piece_position.x, other_piece_position.y, first_piece):
+		shake_screen(6.0, 0.22)
 		return true
 
 	if activate_special(first_piece, first_piece_position.x, first_piece_position.y):
 		activated = true
 	if activate_special(other_piece, other_piece_position.x, other_piece_position.y):
 		activated = true
+	if activated:
+		shake_screen(4.0, 0.18)
 
 	return activated
 
@@ -582,10 +596,12 @@ func line_has_rainbow(line, special_matches):
 func destroy_matched():
 	activate_matched_specials()
 	var was_matched = false
+	var destroyed_count = 0
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] != null and all_pieces[i][j].matched:
 				was_matched = true
+				destroyed_count += 1
 				# TODO (PARCIAL · B1): suma puntaje por cada pieza destruida (o por
 				# combinación) y emite score_changed para actualizar el HUD.
 				current_score += 100
@@ -606,11 +622,13 @@ func destroy_matched():
 				)
 
 				
+				spawn_destroy_effect(all_pieces[i][j].position)
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 
 	move_checked = true
 	if was_matched:
+		show_combo_text(destroyed_count)
 		play_sfx("match")
 		emit_collect_progress()
 		if pending_player_move:
@@ -639,6 +657,9 @@ func activate_matched_specials():
 	for special_position in specials_to_activate:
 		var piece = all_pieces[special_position.x][special_position.y]
 		activate_special(piece, special_position.x, special_position.y)
+
+	if not specials_to_activate.is_empty():
+		shake_screen(4.0, 0.18)
 
 func collapse_columns():
 	for i in width:
@@ -900,6 +921,78 @@ func play_sfx(sound_name: String):
 
 func emit_collect_progress():
 	collect_progress_changed.emit(collected_pink, collected_yellow, collected_blue)
+
+
+func spawn_destroy_effect(effect_position: Vector2):
+	var particles = CPUParticles2D.new()
+	particles.texture = STAR_PARTICLE_TEXTURE
+	particles.position = effect_position
+	particles.amount = 10
+	particles.lifetime = 0.35
+	particles.one_shot = true
+	particles.explosiveness = 0.9
+	particles.direction = Vector2.UP
+	particles.spread = 180.0
+	particles.initial_velocity_min = 80.0
+	particles.initial_velocity_max = 160.0
+	particles.gravity = Vector2(0, 220)
+	particles.scale_amount_min = 0.25
+	particles.scale_amount_max = 0.55
+	particles.z_index = 30
+	add_child(particles)
+	particles.emitting = true
+	await get_tree().create_timer(0.7).timeout
+	if is_instance_valid(particles):
+		particles.queue_free()
+
+
+func shake_screen(strength := 4.0, duration := 0.2):
+	if shake_tween != null:
+		shake_tween.kill()
+
+	var game_node = get_parent()
+	game_node.position = game_original_position
+	shake_tween = create_tween()
+	var shake_steps = 6
+	var step_time = duration / float(shake_steps)
+
+	for step in shake_steps:
+		var random_offset = Vector2(
+			randf_range(-strength, strength),
+			randf_range(-strength, strength)
+		)
+		shake_tween.tween_property(game_node, "position", game_original_position + random_offset, step_time)
+
+	shake_tween.tween_property(game_node, "position", game_original_position, step_time)
+
+
+func show_combo_text(destroyed_count: int):
+	var text_texture = null
+
+	if destroyed_count >= 13:
+		text_texture = SUPER_TEXTURE
+	elif destroyed_count >= 9:
+		text_texture = AMAZING_TEXTURE
+	elif destroyed_count >= 6:
+		text_texture = GREAT_TEXTURE
+	else:
+		return
+
+	if combo_text != null and is_instance_valid(combo_text):
+		combo_text.queue_free()
+
+	combo_text = Sprite2D.new()
+	combo_text.texture = text_texture
+	combo_text.position = Vector2(288, 360)
+	combo_text.scale = Vector2(0.22, 0.22)
+	combo_text.z_index = 50
+	get_parent().add_child(combo_text)
+
+	var text_tween = create_tween()
+	text_tween.tween_property(combo_text, "scale", Vector2(0.3, 0.3), 0.18)
+	text_tween.tween_interval(0.55)
+	text_tween.tween_property(combo_text, "modulate:a", 0.0, 0.25)
+	text_tween.tween_callback(combo_text.queue_free)
 	
 
 func get_final_message(gano: bool) -> String:

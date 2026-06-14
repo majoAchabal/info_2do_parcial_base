@@ -11,6 +11,7 @@ font_size = 24
 [sub_resource type="LabelSettings" id="LabelSettings_8bjlm"]
 font = ExtResource("2_pei76")
 font_size = 60
+font_color = Color(0.129412, 0.0470588, 0.27451, 1)
 
 [node name="top_ui" type="TextureRect"]
 offset_right = 576.0
